@@ -78,7 +78,8 @@
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:cov && pnpm build && pnpm check:package",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish",
-    "prepublishOnly": "pnpm check"
+    "prepublishOnly": "pnpm check",
+    "prepare": "tsup"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
