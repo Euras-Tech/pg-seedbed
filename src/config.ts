@@ -1,11 +1,14 @@
 import { access } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { importModule } from './discover';
 import type { GuardPolicy } from './guard';
 import type { SeederClass } from './seeder';
 
 export interface SeedbedConfig {
-  seeders: SeederClass[];
+  /** Explicit seeder list. Omit it to auto-discover everything in `seedersDir`. */
+  seeders?: SeederClass[];
+  /** Where seeders are discovered, relative to the project. Default: `database/seeders`. */
+  seedersDir?: string;
   defaultSeeder?: SeederClass;
   /** Environment variable holding the connection URL. Default: `DATABASE_URL`. */
   connectionEnv?: string;
@@ -19,6 +22,8 @@ export interface SeedbedConfig {
 export function defineConfig(config: SeedbedConfig): SeedbedConfig {
   return config;
 }
+
+export const DEFAULT_SEEDERS_DIR = 'database/seeders';
 
 const CONFIG_FILES = [
   'seedbed.config.mjs',
@@ -37,11 +42,14 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** Loads `seedbed.config.{mjs,js,cjs,mts,ts}` (or an explicit path) from `cwd`. */
+/**
+ * Loads `seedbed.config.{mjs,js,cjs,mts,ts}` (or an explicit path) from `cwd`.
+ * Like Laravel, a config is optional: without one the defaults apply.
+ */
 export async function loadConfig(
   explicitPath: string | undefined,
   cwd: string,
-): Promise<{ config: SeedbedConfig; path: string }> {
+): Promise<{ config: SeedbedConfig; path: string | undefined }> {
   let path: string | undefined;
   if (explicitPath) {
     path = resolve(cwd, explicitPath);
@@ -54,32 +62,21 @@ export async function loadConfig(
         break;
       }
     }
-    if (!path) throw new Error(`No config found. Create ${CONFIG_FILES[0]} (see the README).`);
+    if (!path) return { config: {}, path: undefined };
   }
 
-  let loaded: Record<string, unknown>;
-  try {
-    loaded = (await import(pathToFileURL(path).href)) as Record<string, unknown>;
-  } catch (error) {
-    if (
-      /\.[cm]?ts$/.test(path) &&
-      (error as { code?: string }).code === 'ERR_UNKNOWN_FILE_EXTENSION'
-    ) {
-      throw new Error(
-        `Cannot load ${path}: TypeScript configs need a loader, e.g. NODE_OPTIONS='--import tsx' pg-seedbed run`,
-        { cause: error },
-      );
-    }
-    throw error;
-  }
+  const loaded = await importModule(path);
   const candidate = (loaded.default ?? loaded.config) as unknown;
   const config = (
     candidate && typeof candidate === 'object' && 'default' in candidate
       ? (candidate as { default: unknown }).default
       : candidate
   ) as SeedbedConfig | undefined;
-  if (!config || !Array.isArray(config.seeders)) {
-    throw new Error(`${path} must export a config with a \`seeders\` array (use defineConfig).`);
+  if (!config || typeof config !== 'object') {
+    throw new Error(`${path} must export a config object (use defineConfig).`);
+  }
+  if (config.seeders !== undefined && !Array.isArray(config.seeders)) {
+    throw new Error(`${path}: \`seeders\` must be an array of seeder classes.`);
   }
   return { config, path };
 }

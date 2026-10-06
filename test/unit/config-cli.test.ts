@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -60,11 +60,27 @@ describe('defineConfig / loadConfig', () => {
     expect((await loadConfig(undefined, dir)).config.seeders).toHaveLength(1);
   });
 
+  it('is optional: no config file means defaults', async () => {
+    expect(await loadConfig(undefined, dir)).toEqual({ config: {}, path: undefined });
+  });
+
+  it('accepts a config without a seeders list (discovery applies)', async () => {
+    await writeFile(
+      join(dir, 'seedbed.config.mjs'),
+      "export default { guard: { allowedDatabases: ['app'] } };",
+    );
+    expect((await loadConfig(undefined, dir)).config.seeders).toBeUndefined();
+  });
+
   it('explains what is wrong', async () => {
-    await expect(loadConfig(undefined, dir)).rejects.toThrow('No config found');
     await expect(loadConfig('missing.mjs', dir)).rejects.toThrow('not found');
-    await writeFile(join(dir, 'seedbed.config.mjs'), 'export default { nope: true };');
-    await expect(loadConfig(undefined, dir)).rejects.toThrow('`seeders` array');
+    // Distinct file names: ESM caches modules by path.
+    await writeFile(join(dir, 'not-an-object.mjs'), 'export default 42;');
+    await expect(loadConfig('not-an-object.mjs', dir)).rejects.toThrow(
+      'must export a config object',
+    );
+    await writeFile(join(dir, 'bad-seeders.mjs'), "export default { seeders: 'nope' };");
+    await expect(loadConfig('bad-seeders.mjs', dir)).rejects.toThrow('must be an array');
   });
 });
 
@@ -72,7 +88,7 @@ describe('runCli', () => {
   it('prints help and version', async () => {
     const help = io();
     expect(await runCli(['--help'], help.io)).toBe(0);
-    expect(help.out.join('\n')).toContain('Usage: pg-seedbed');
+    expect(help.out.join('\n')).toContain('pg-seedbed [run] [options]');
     const version = io();
     expect(await runCli(['-v'], version.io)).toBe(0);
     expect(version.out).toEqual(['1.2.3']);
@@ -86,22 +102,38 @@ describe('runCli', () => {
     expect(await runCli(['--nope'], option.io)).toBe(2);
   });
 
-  it('fails clearly without a config or connection URL', async () => {
+  it('fails clearly without a connection URL, with or without a config', async () => {
     const noConfig = io();
     expect(await runCli(['run'], noConfig.io)).toBe(1);
-    expect(noConfig.err[0]).toContain('No config found');
+    expect(noConfig.err[0]).toContain('DATABASE_URL is not set');
 
     await writeFile(
       join(dir, 'seedbed.config.mjs'),
       `${SEEDER}\nexport default { seeders: [DatabaseSeeder] };`,
     );
-    const noUrl = io();
-    expect(await runCli([], noUrl.io)).toBe(1);
-    expect(noUrl.err[0]).toContain('DATABASE_URL is not set');
-
     const custom = io();
     expect(await runCli(['--url-env', 'MY_DB'], custom.io)).toBe(1);
     expect(custom.err[0]).toContain('MY_DB is not set');
+  });
+
+  it('explains where to put seeders when none are found', async () => {
+    const missing = io({ DATABASE_URL: 'postgres://u:p@localhost/app' });
+    expect(await runCli(['run'], missing.io)).toBe(1);
+    expect(missing.err[0]).toContain('No seeders found. Create database/seeders/DatabaseSeeder.ts');
+
+    await writeFile(join(dir, 'seedbed.config.mjs'), "export default { seedersDir: 'seeds' };");
+    const custom = io({ DATABASE_URL: 'postgres://u:p@localhost/app' });
+    expect(await runCli(['run'], custom.io)).toBe(1);
+    expect(custom.err[0]).toContain('Create seeds/DatabaseSeeder.ts');
+  });
+
+  it('auto-discovers database/seeders without any config file', async () => {
+    await mkdir(join(dir, 'database/seeders'), { recursive: true });
+    await writeFile(join(dir, 'database/seeders/DatabaseSeeder.mjs'), SEEDER);
+    const remote = io({ DATABASE_URL: 'postgres://u:p@prod.example.com/app' });
+    expect(await runCli(['run'], remote.io)).toBe(1);
+    // Got past discovery and failed at the guard, which proves the seeder was found.
+    expect(remote.err[0]).toContain('Refusing to seed remote host');
   });
 
   it('refuses unsafe targets and unknown seeders without connecting', async () => {

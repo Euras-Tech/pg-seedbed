@@ -20,15 +20,23 @@ export const silentLogger: Logger = {
   error: () => undefined,
 };
 
+export type SeederClass = new (...args: never[]) => Seeder;
+
+/** Seeders can be passed one by one or as arrays, like Laravel's `$this->call([A::class, B::class])`. */
+export type SeederArgument = SeederClass | readonly SeederClass[];
+
 export interface SeederContext {
   readonly db: Queryable;
   readonly ids: Ids;
   readonly random: Random;
   readonly log: Logger;
-  call(...seeders: SeederClass[]): Promise<void>;
+  /** Runs seeders in order. */
+  call(...seeders: SeederArgument[]): Promise<void>;
+  /** Like `call`, but skips seeders already run through `callOnce` in this run. */
+  callOnce(...seeders: SeederArgument[]): Promise<void>;
+  /** Like `call`, without the per-seeder output. */
+  callSilent(...seeders: SeederArgument[]): Promise<void>;
 }
-
-export type SeederClass = new (...args: never[]) => Seeder;
 
 /**
  * Base class for seeders, like Laravel's `Seeder`. Write `run()` as idempotent upserts
@@ -63,8 +71,16 @@ export abstract class Seeder {
     return this.context.log;
   }
 
-  protected call(...seeders: SeederClass[]): Promise<void> {
+  protected call(...seeders: SeederArgument[]): Promise<void> {
     return this.context.call(...seeders);
+  }
+
+  protected callOnce(...seeders: SeederArgument[]): Promise<void> {
+    return this.context.callOnce(...seeders);
+  }
+
+  protected callSilent(...seeders: SeederArgument[]): Promise<void> {
+    return this.context.callSilent(...seeders);
   }
 
   abstract run(): Promise<void>;

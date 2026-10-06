@@ -17,7 +17,7 @@ Node.js 20 or newer. The default database URL used by the integration tests is
 ## Guidelines
 
 - **Test first.** Every behaviour change needs a unit test; anything touching SQL, transactions or the CLI also needs an integration test.
-- **Security first.** Values must stay bound parameters. Identifiers must go through `quoteTable`/`quoteColumn`. Error messages must never contain credentials. Do not add a way to bypass the environment guard.
+- **Security first.** Values must stay bound parameters. Identifiers must go through `quoteTable`/`quoteColumn`. Error messages must never contain credentials. The only override is `force`, which skips the environment check alone; never add a way to bypass the host or database checks.
 - **No runtime dependencies.** `pg` is a peer dependency; Nest is an optional peer.
 - **Keep the API small.** Open an issue before adding public API.
 - Coverage gates (90% lines/functions/statements, 85% branches) are enforced in CI.

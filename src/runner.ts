@@ -23,6 +23,8 @@ export interface RunOptions {
   /** An already connected client. The guard is skipped: you are responsible for the target. */
   client?: Queryable;
   guard?: GuardPolicy;
+  /** Environment inspected by the guard. Default: `process.env`. */
+  env?: Record<string, string | undefined>;
   /** UUID namespace for `ids()`. Required to use `ids()`. */
   idNamespace?: string;
   /** Seed for `random`. Default: `pg-seedbed`. */
@@ -75,7 +77,7 @@ export async function runSeeders(options: RunOptions): Promise<RunResult> {
     db = options.client;
   } else {
     if (!options.connectionString) throw new Error('Provide `connectionString` or `client`.');
-    assertSafeTarget(options.connectionString, options.guard);
+    assertSafeTarget(options.connectionString, options.guard, options.env);
     owned = new pg.Client({ connectionString: options.connectionString });
     await owned.connect();
     db = owned;
@@ -90,29 +92,45 @@ export async function runSeeders(options: RunOptions): Promise<RunResult> {
         throw new Error('Set `idNamespace` to use ids().');
       };
 
+  const calledOnce = new Set<SeederClass>();
+
+  const runSeeder = async (seeder: SeederClass, silent: boolean): Promise<void> => {
+    if (stack.includes(seeder)) {
+      throw new Error(
+        `Circular seeder call: ${[...stack, seeder].map((s) => s.name).join(' -> ')}`,
+      );
+    }
+    const instance = resolve(seeder);
+    instance.attach(context);
+    ran.push(seeder.name);
+    if (!silent) log.info(`Seeding ${seeder.name}`);
+    const seederStart = Date.now();
+    stack.push(seeder);
+    try {
+      await instance.run();
+    } finally {
+      stack.pop();
+    }
+    if (!silent) log.info(`Seeded ${seeder.name} (${Date.now() - seederStart} ms)`);
+  };
+
   const context: SeederContext = {
     db,
     ids,
     random: createRandom(options.randomSeed ?? 'pg-seedbed'),
     log,
     async call(...seeders) {
-      for (const seeder of seeders) {
-        if (stack.includes(seeder)) {
-          throw new Error(
-            `Circular seeder call: ${[...stack, seeder].map((s) => s.name).join(' -> ')}`,
-          );
-        }
-        const instance = resolve(seeder);
-        instance.attach(context);
-        ran.push(seeder.name);
-        log.info(`Seeding ${seeder.name}`);
-        stack.push(seeder);
-        try {
-          await instance.run();
-        } finally {
-          stack.pop();
-        }
+      for (const seeder of seeders.flat()) await runSeeder(seeder, false);
+    },
+    async callOnce(...seeders) {
+      for (const seeder of seeders.flat()) {
+        if (calledOnce.has(seeder)) continue;
+        calledOnce.add(seeder);
+        await runSeeder(seeder, false);
       }
+    },
+    async callSilent(...seeders) {
+      for (const seeder of seeders.flat()) await runSeeder(seeder, true);
     },
   };
 

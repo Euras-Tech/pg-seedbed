@@ -42,6 +42,10 @@ describe('loggers', () => {
       }
     }
     await runSeeders({ seeders: [Chatty], defaultSeeder: Chatty, client: fakeDb().db, logger });
-    expect(messages).toEqual(['Seeding Chatty', 'rolled 1']);
+    expect(messages).toEqual([
+      'Seeding Chatty',
+      'rolled 1',
+      expect.stringMatching(/^Seeded Chatty \(\d+ ms\)$/),
+    ]);
   });
 });
