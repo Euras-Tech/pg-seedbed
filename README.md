@@ -13,11 +13,26 @@ Laravel-style **seeders and factories for Node.js and PostgreSQL**. Same folder 
 
 ## Install
 
+`pg-seedbed` is not on npm yet. Install it straight from GitHub, pinned to a commit so builds are reproducible (it is built on install):
+
 ```bash
-pnpm add -D pg-seedbed pg     # or npm i -D / yarn add -D
+npm i -D github:Euras-Tech/pg-seedbed#<commit-sha> pg
 ```
 
-Requires Node.js 20+ and `pg` 8. The NestJS module (`pg-seedbed/nest`) needs `@nestjs/common` and `@nestjs/core` 11.
+With **pnpm 10**, allow the build of the git-hosted package once, in your `pnpm-workspace.yaml`:
+
+```yaml
+onlyBuiltDependencies:
+  - pg-seedbed
+```
+
+```bash
+pnpm add -D github:Euras-Tech/pg-seedbed#<commit-sha> pg
+```
+
+After the npm release this becomes `pnpm add -D pg-seedbed pg` (and the allowlist is no longer needed).
+
+Requires Node.js 20+ and `pg` 8. The NestJS module (`pg-seedbed/nest`) also needs `@nestjs/common` and `@nestjs/core` 11 installed.
 
 ## Quick start
 
