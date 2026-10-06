@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    "paths": {
+      "pg-seedbed": ["./src/index.ts"],
+      "pg-seedbed/nest": ["./src/nest/index.ts"]
+    },
+    "noEmit": true
+  },
+  "include": ["src", "test", "examples", "*.ts", "*.mjs"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

@@ -1,0 +1,117 @@
+{
+  "name": "pg-seedbed",
+  "version": "0.0.0",
+  "description": "Laravel-style database seeders and factories for Node.js and PostgreSQL: deterministic IDs, idempotent upserts, environment guards, a CLI and a NestJS module.",
+  "keywords": [
+    "postgres",
+    "postgresql",
+    "pg",
+    "seed",
+    "seeder",
+    "seeding",
+    "factory",
+    "fixtures",
+    "nestjs",
+    "laravel",
+    "uuid-v5"
+  ],
+  "license": "Apache-2.0",
+  "author": "Soulaimane Aattar",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.34.6",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./nest": {
+      "import": {
+        "types": "./dist/nest/index.d.ts",
+        "default": "./dist/nest/index.js"
+      },
+      "require": {
+        "types": "./dist/nest/index.d.cts",
+        "default": "./dist/nest/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "pg-seedbed": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:cov": "vitest run test/unit --coverage",
+    "check:package": "publint && attw --pack . --profile node16",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:cov && pnpm build && pnpm check:package",
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish",
+    "prepublishOnly": "pnpm check"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "pg": "^8.11.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@changesets/cli": "3.0.3",
+    "@eslint/js": "9.39.5",
+    "@nestjs/common": "11.2.6",
+    "@nestjs/core": "11.2.6",
+    "@types/node": "22.20.4",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.0.3",
+    "eslint": "9.39.5",
+    "pg": "8.23.1",
+    "prettier": "3.9.9",
+    "publint": "0.3.25",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "tsup": "8.5.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "5.0.3"
+  }
+}
