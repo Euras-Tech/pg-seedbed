@@ -113,5 +113,13 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
     "vitest": "5.0.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Euras-Tech/pg-seedbed.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Euras-Tech/pg-seedbed/issues"
+  },
+  "homepage": "https://github.com/Euras-Tech/pg-seedbed#readme"
 }
